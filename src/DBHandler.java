@@ -2,7 +2,7 @@ import com.mysql.cj.MysqlConnection;
 
 import java.sql.*;
 
-public class DBEngine {
+public class DBHandler {
 //    static final String DB_URL = "jdbc:mysql://localhost:3306?";
 //    static final String USER = "root";
 //    static final String PASSWORD = "Zi26303y";
@@ -11,9 +11,10 @@ public class DBEngine {
     private String url;
     private String username;
     private String password;
-    private MysqlConnection mysqlConnection;
+    private Connection connection;
+    private Statement statement;
 
-    public DBEngine(String url, String username, String password){
+    public DBHandler(String url, String username, String password){
         this.url = url;
         this.username = username;
         this.password = password;
@@ -21,15 +22,49 @@ public class DBEngine {
 
     public void establishConnection(){
         try {
-            mysqlConnection = (MysqlConnection) DriverManager.getConnection(this.url, this.username, this.password);
+            connection = DriverManager.getConnection(this.url, this.username, this.password);
         } catch(SQLException e) {
             e.printStackTrace();
         }
     }
 
     public void closeConnection(){
-
+        try {
+            connection.close();
+        } catch(SQLException e) {
+            e.printStackTrace();
+        }
     }
+
+    public Connection getConnection(){
+        return this.connection;
+    }
+
+    public void createDatabase(String databaseName, String tableName) {
+
+        String sqlCreateDatabase = "CREATE DATABASE IF NOT EXISTS "
+                + databaseName;
+
+        String sqlSelectDatabase  = "USE " + databaseName;
+
+        String sqlCreateTable = "CREATE TABLE "
+                + tableName
+//                + " (id INT AUTO_INCREMENT PRIMARY KEY,"
+                + " (X DOUBLE,"
+                + " Y DOUBLE,"
+                + " Cluster TEXT)";
+
+        try {
+            statement = connection.createStatement();
+            statement.executeUpdate(sqlCreateDatabase);
+            statement.executeUpdate(sqlSelectDatabase);
+            statement.executeUpdate(sqlCreateTable);
+        }
+        catch(SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
 
 
 //    public static void main(String[] args) {
@@ -44,9 +79,9 @@ public class DBEngine {
 //            String sqlSelectDatabase  = "USE " + DATABASE_NAME;
 //
 //            String sqlCreateTable = "CREATE TABLE DataClustering"
-//                    + " (id INTEGER not NULL,"
-//                    + " X INTEGER,"
-//                    + " Y INTEGER,"
+//                    + " (id INT AUTO_INCREMENT PRIMARY KEY,"
+//                    + " X DOUBLE,"
+//                    + " Y DOUBLE,"
 //                    + " Cluster TEXT,"
 //                    + " PRIMARY KEY ( id ))";
 //
