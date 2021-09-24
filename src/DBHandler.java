@@ -1,18 +1,24 @@
 import com.mysql.cj.MysqlConnection;
+import javafx.scene.control.Alert;
 
 import java.sql.*;
 
+/**
+ * Author: Lyndon Foster.
+ * Course: ITC313 - Programming in Java 2.
+ * Assessment Title: Assessment Item 2, Task 4 - Build a Data Loader Application.
+ * Date: September 26th, 2021.
+ */
 public class DBHandler {
 //    static final String DB_URL = "jdbc:mysql://localhost:3306?";
 //    static final String USER = "root";
 //    static final String PASSWORD = "Zi26303y";
 //    static final String DATABASE_NAME = "CLUSTERS";
 
-    private String url;
-    private String username;
-    private String password;
+    private final String url;
+    private final String username;
+    private final String password;
     private Connection connection;
-    private Statement statement;
 
     public DBHandler(String url, String username, String password){
         this.url = url;
@@ -40,6 +46,10 @@ public class DBHandler {
         return this.connection;
     }
 
+    // Ideally for this DBHandler Class there would be dedicated functions for creating
+    // and updating schemas and tables on the MySQL server.
+    // Given the limited scope of this task, it makes more sense to have a
+    // single function that can create the initial schema and results table.
     public void createDatabase(String databaseName, String tableName) {
 
         String sqlCreateDatabase = "CREATE DATABASE IF NOT EXISTS "
@@ -47,23 +57,39 @@ public class DBHandler {
 
         String sqlSelectDatabase  = "USE " + databaseName;
 
-        String sqlCreateTable = "CREATE TABLE "
+        String sqlCreateTable = "CREATE TABLE IF NOT EXISTS "
                 + tableName
 //                + " (id INT AUTO_INCREMENT PRIMARY KEY,"
                 + " (X DOUBLE,"
                 + " Y DOUBLE,"
                 + " Cluster TEXT)";
-
         try {
-            statement = connection.createStatement();
+            Statement statement = connection.createStatement();
             statement.executeUpdate(sqlCreateDatabase);
+            System.out.println("Created database: " + databaseName);
             statement.executeUpdate(sqlSelectDatabase);
+            System.out.println("Selected database: " + databaseName);
             statement.executeUpdate(sqlCreateTable);
+            System.out.println("Created table: " + tableName);
         }
         catch(SQLException e) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("SQL Error.");
+            alert.setContentText("An unexpected SQL error occurred, but the operation was still completed successfully." +
+                    "Some data may be duplicated or missing.");
+            alert.show();
             e.printStackTrace();
         }
     }
+
+//    public void createTable(String tableName) {
+//        String sqlCreateTable = "CREATE TABLE "
+//                + tableName
+//                //                + " (id INT AUTO_INCREMENT PRIMARY KEY,"
+//                + " (X DOUBLE,"
+//                + " Y DOUBLE,"
+//                + " Cluster TEXT)";
+//    }
 
 
 
