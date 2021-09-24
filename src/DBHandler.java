@@ -10,10 +10,6 @@ import java.sql.*;
  * Date: September 26th, 2021.
  */
 public class DBHandler {
-//    static final String DB_URL = "jdbc:mysql://localhost:3306?";
-//    static final String USER = "root";
-//    static final String PASSWORD = "Zi26303y";
-//    static final String DATABASE_NAME = "CLUSTERS";
 
     private final String url;
     private final String username;
@@ -91,33 +87,4 @@ public class DBHandler {
 //                + " Cluster TEXT)";
 //    }
 
-
-
-//    public static void main(String[] args) {
-//
-//        // Open a connection
-//        try (Connection connection = DriverManager.getConnection(DB_URL, USER, PASSWORD);
-//             Statement statement = connection.createStatement()) {
-//
-//            String sqlCreateDatabase = "CREATE DATABASE IF NOT EXISTS "
-//                    + DATABASE_NAME;
-//
-//            String sqlSelectDatabase  = "USE " + DATABASE_NAME;
-//
-//            String sqlCreateTable = "CREATE TABLE DataClustering"
-//                    + " (id INT AUTO_INCREMENT PRIMARY KEY,"
-//                    + " X DOUBLE,"
-//                    + " Y DOUBLE,"
-//                    + " Cluster TEXT,"
-//                    + " PRIMARY KEY ( id ))";
-//
-//
-//            statement.executeUpdate(sqlCreateDatabase);
-//            statement.executeUpdate(sqlSelectDatabase);
-//            statement.executeUpdate(sqlCreateTable);
-//            System.out.println("Created table in given database...");
-//        } catch(SQLException e) {
-//            e.printStackTrace();
-//        }
-//    }
 }
