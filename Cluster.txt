@@ -7,7 +7,7 @@ X		Y		Cluster
 1.840	6.883	Cluster1
 3.019	7.138	Cluster1
 1.104	5.650	Cluster1
-3.725	6.642	Cluster1
+3.725	6.642
 2.132	7.098	Cluster1
 1.578	6.548	Cluster1
 1.235	5.999	Cluster1

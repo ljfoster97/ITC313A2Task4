@@ -20,10 +20,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+
 /**
  * Author: Lyndon Foster.
  * Course: ITC313 - Programming in Java 2.
- * Assessment Title: Assessment Item 2, Task 4 - Build a Data Loader Application.
+ * Assessment Title: Assessment Item 2, Task 4 - Build a Data Loader Application,
+ * Task 5 - Display the Records of Clusters.
+ * <p>
  * Date: September 26th, 2021.
  */
 public class Task4 extends Application {
@@ -38,19 +41,22 @@ public class Task4 extends Application {
     XYChart.Series cluster3 = new XYChart.Series();
     XYChart.Series cluster4 = new XYChart.Series();
 
-//    private Desktop desktop = Desktop.getDesktop();
-
     public static void main(String[] args) {
         launch(args);
     }
 
     @Override
     public void start(Stage stage) {
-        Connection connection = getConnection();
-
+        // Get DBHandler.
+        // This could be initialized as a field for global access but for encapsulation this seems like best practice.
+        DBHandler dbHandler = Utilities.setupDatabaseConnection(DB_NAME, TABLE_NAME);
+        // Set up FileChooser.
         final FileChooser fileChooser = new FileChooser();
-        configureFileChooser(fileChooser);
+        // Call function to set up the FileChooser.
+        Utilities.configureFileChooser(fileChooser);
+        // Create a new button for opening the clusters.txt in explorer.
         final Button openButton = new Button("Open file...");
+        // Set up the button actions.
         openButton.setOnAction(
                 e -> {
                     File file = fileChooser.showOpenDialog(stage);
@@ -58,61 +64,99 @@ public class Task4 extends Application {
                         // Optionally open the raw data in Windows.
                         // May be useful for comparing the chart and raw data.
                         //                        openFile(file);
-                        openFile(file, connection);
+                        openFile(file, dbHandler);
+                        // Call loadData to read the data from the DB and display it on the chart.
+                        // This means that every time a file is read in, the display is immediately refreshed.
+                        try {
+                            loadData(dbHandler);
+                        } catch(Exception e1) {
+                            Utilities.showDialogWindow(Alert.AlertType.ERROR, "An unknown error occured while trying to display the data.",
+                                    "Corrupt database.",
+                                    "Unknown Error.");
+                        }
 
                     }
                 });
-
-        loadData(connection);
-
-        final NumberAxis xAxis = new NumberAxis(0, 8, 1);
-        final NumberAxis yAxis = new NumberAxis(0, 8, 1);
+        // Call function to load data any previously existing data from the table.
+        loadData(dbHandler);
+        // Setting range based on the data set.
+        // This should be done dynamically based on the values in the dataset.
+        final NumberAxis xAxis = new NumberAxis();
+        final NumberAxis yAxis = new NumberAxis();
+        // Set up ScatterChart.
         final ScatterChart<Number, Number> clusterDisplay = new ScatterChart<>(xAxis, yAxis);
+        // add XYChart.Series to the ScatterChart.
         clusterDisplay.getData().addAll(cluster1, cluster2, cluster3, cluster4);
         clusterDisplay.setPrefSize(700, 600);
 
+        // VBox to stack the chart and buttons.
         final VBox vBox = new VBox();
+        // HBox to hold the btutons.
         final HBox hBox = new HBox();
         hBox.setSpacing(10);
+        // Add button to horizontal box.
         hBox.getChildren().addAll(openButton);
+        // Add the cluster chart and the HBox to the VBox.
         vBox.getChildren().addAll(clusterDisplay, hBox);
+        // Padding to space the button and window border.
         hBox.setPadding(new Insets(10, 10, 10, 50));
-
+        // Create a new group, add it to a new scene.
         Scene scene = new Scene(new Group());
+        // Add the VBox to the scene.
         ((Group) scene.getRoot()).getChildren().add(vBox);
-
-        stage.setTitle("Cluster Display Samples");
+        // Set window title.
+        stage.setTitle("Clusters");
         stage.setResizable(false);
+        // Add scene to stage and display.
         stage.setScene(scene);
         stage.show();
     }
 
-    //
-    public void openFile(File file, Connection connection) {
+    // Function to read the clusters.txt line by line and add data into the MySQL Database.
+    public void openFile(File file, DBHandler dbHandler) {
+        boolean error = false;
+        String valX = "";
+        String valY = "";
+        String cluster = "";
+        // Get connection, alternatively could parse the connection as a parameter to this function,
+        // but this seems like better practice/encapsulation.
+        // I think that it's better to parse the DBHandler to functions that require it,
+        // rather than having it globally accessible.
+        Connection connection = dbHandler.getConnection();
         // Try/catch block for file reader.
         try {
-            // This can be simplified.
-            // New FileReader, parse in the file object from the FileChooser.
-            FileReader fileReader = new FileReader(file);
-            // Parse the FileReader into a new BufferedReader.
-            BufferedReader bufferedReader = new BufferedReader(fileReader);
-            // Init empty string.
+            // Set up BufferedReader.
+            BufferedReader bufferedReader = new BufferedReader(new FileReader(file));
+            // Skip the header line.
             bufferedReader.readLine();
+            // Init empty string.
             String read = null;
             // Read the file line by line.
-
             while ((read = bufferedReader.readLine()) != null) {
-                // Split the string by tab/whitespace.
-                String[] row = read.split("\t");
-                // The first index is the X value.
-                String valX = row[0];
-                // The second index is the Y value.
-                String valY = row[1];
-                // The name of the cluster the data belongs to is the third index.
-                String cluster = row[2];
+
                 try {
-                    // Create a new PreparedStatment to insert these values into the MySQL DB.
+                    // Split the string by tab/whitespace.
+                    String[] row = read.split("\t");
+                    // The first index is the X value.
+                    valX = row[0];
+                    // The second index is the Y value.
+                    valY = row[1];
+                    // The name of the cluster the data belongs to is the third index.
+                    cluster = row[2];
+                } catch(Exception e) {
+                    Utilities.showDialogWindow(Alert.AlertType.ERROR,
+                            "An unknown SQL error occurred while trying to load the data." +
+                                    "\nPlease verify that the correct PIDC-0 Data was selected.",
+                            "SQL Error.",
+                            "Operation Failed.");
+                    error = true;
+                    e.printStackTrace();
+                    break;
+                }
+                try {
+                    // Create a new PreparedStatement to insert these values into the MySQL DB.
                     // '?' are placeholders that can then be set to variables.
+                    // This could just be a function within the DBHandler class itself.
                     PreparedStatement preparedStatement = connection.prepareStatement(
                             "INSERT INTO "
                                     + DB_NAME
@@ -127,6 +171,9 @@ public class Task4 extends Application {
                     preparedStatement.execute();
                     // Catch statement for any SQL errors.
                 } catch(SQLException e) {
+                    // Catch displays alert window.
+                    // From testing it's most likely for errors to occur when schema/table already
+                    // exists or the data is corrupted/not formatted properly.
                     Alert alert = new Alert(Alert.AlertType.WARNING);
                     alert.setTitle("SQL Error.");
                     alert.setContentText("An unexpected SQL error occurred, but the operation was still completed successfully." +
@@ -135,25 +182,39 @@ public class Task4 extends Application {
                     e.printStackTrace();
                 }
             }
-            // Confirmation message if no errors occur.
-            Alert success = new Alert(Alert.AlertType.INFORMATION);
-            success.setTitle("Operation Successful");
-            success.setContentText("The data has been successfully added to the table.");
-            success.show();
+            if (! error) {
+                // Confirmation message if no errors occur.
+                Utilities.showDialogWindow(Alert.AlertType.INFORMATION,
+                        "The data has been successfully added to the database.",
+                        "Data Processed.",
+                        "Operation Successful.");
+            }
         } catch(Exception e) {
+            Utilities.showDialogWindow(Alert.AlertType.ERROR,
+                    "An unknown SQL error occurred while trying to load the data." +
+                            "Please verify that the correct PIDC-0 Data was selected.",
+                    "SQL Error.",
+                    "Operation Failed.");
             e.printStackTrace();
         }
     }
 
     // Function to read data in from the database and display it on the XYChart.
-    public void loadData(Connection connection) {
+    public void loadData(DBHandler dbHandler) {
+        // Get connection, alternatively could parse the connection as a parameter to this function,
+        // but this seems like better practice/encapsulation
+        // as it would allow the connection to be properly closed via DBHandler.closeConnection() method
+        // if expanding the functionality of the program.
+        Connection connection = dbHandler.getConnection();
         // Set labels for each cluster.
         cluster1.setName("Cluster 1");
         cluster2.setName("Cluster 2");
         cluster3.setName("Cluster 3");
         cluster4.setName("Cluster 4");
         // Try/catch block for PreparedStatement.
-        try { PreparedStatement preparedStatement = connection.prepareStatement("SELECT x, y FROM "
+        // Ideally this could be generified into a function within the DBHandler.
+        try {
+            PreparedStatement preparedStatement = connection.prepareStatement("SELECT x, y FROM "
                     + TABLE_NAME
                     + " WHERE "
                     + TABLE_NAME
@@ -161,7 +222,7 @@ public class Task4 extends Application {
                     + "cluster = ?");
             // Specify which cluster to get data for.
             preparedStatement.setString(1, "Cluster1");
-            // Create a new resultset from the result of the SQL query.
+            // Create a new ResultSet from the result of the SQL query.
             ResultSet resultSetCluster1 = preparedStatement.executeQuery();
             // Iterate through the result set.
             while (resultSetCluster1.next()) {
@@ -170,7 +231,9 @@ public class Task4 extends Application {
             }
 
             // Repeat the above steps for each cluster.
-            // There is likely a more efficient way to do this instead of repeating similar code.
+            // There is likely a more efficient way to do this instead of repeating similar code for each cluster.
+            // The outline specified that these data sets only ever have 4 clusters though, so this is easier
+            // than making the amount of clusters dynamic.
             preparedStatement.setString(1, "Cluster2");
             ResultSet resultSetCluster2 = preparedStatement.executeQuery();
             while (resultSetCluster2.next()) {
@@ -188,52 +251,15 @@ public class Task4 extends Application {
             while (resultSetCluster4.next()) {
                 cluster4.getData().add(new XYChart.Data(resultSetCluster4.getDouble(1), resultSetCluster4.getDouble(2)));
             }
-        // Catch statement.
+            // Catch statement.
         } catch(SQLException e) {
-            // Create Alert window if any errors occur while reading the data or creating the chart.
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setContentText("An unknown SQL error occurred while trying to load the data.");
-            alert.setTitle("SQL Error.");
-            alert.show();
+            // Create alert window for SQL errors.
+            Utilities.showDialogWindow(Alert.AlertType.ERROR,
+                    "An unknown SQL error occurred while trying to load the data.",
+                    "SQL Error.",
+                    "Operation Failed.");
             e.printStackTrace();
         }
     }
 
-    // Function to set initialDirectory and allowed file types for FileChooser.
-    private static void configureFileChooser(FileChooser fileChooser) {
-        fileChooser.setTitle("Select PIDC-O Data.");
-        fileChooser.setInitialDirectory(
-                new File(System.getProperty("user.home"))
-        );
-        fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("All files", "*.*"),
-                new FileChooser.ExtensionFilter("TXT", "*.txt"),
-                new FileChooser.ExtensionFilter("CSV", "*.csv")
-        );
-    }
-
-    // Sets up JDBC and returns connection object.
-    public Connection getConnection() {
-        // This database setup can likely be its own function.
-        // Create new DBHandler Object and specify the required parameters.
-        DBHandler dbHandler = new DBHandler("jdbc:mysql://localhost:3306?", "root", "Zi26303y");
-        // Call function to establish the connection.
-        dbHandler.establishConnection();
-        // Create local connection object from the DBHandler.
-        Connection connection = dbHandler.getConnection();
-        // Call function to create the database and table using the fields specified in this class.
-        dbHandler.createDatabase(DB_NAME, TABLE_NAME);
-        return connection;
-    }
-
-    //    private void openFile(File file) {
-    //        try {
-    //            desktop.open(file);
-    //        } catch (IOException ex) {
-    //            Logger.getLogger(
-    //                    Task4.class.getName()).log(
-    //                    Level.SEVERE, null, ex
-    //            );
-    //        }
-    //    }
 }
