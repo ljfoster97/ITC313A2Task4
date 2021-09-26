@@ -81,8 +81,8 @@ public class Task4 extends Application {
         loadData(dbHandler);
         // Setting range based on the data set.
         // This should be done dynamically based on the values in the dataset.
-        final NumberAxis xAxis = new NumberAxis();
-        final NumberAxis yAxis = new NumberAxis();
+        final NumberAxis xAxis = new NumberAxis(0,8,1);
+        final NumberAxis yAxis = new NumberAxis(0,8,1);
         // Set up ScatterChart.
         final ScatterChart<Number, Number> clusterDisplay = new ScatterChart<>(xAxis, yAxis);
         // add XYChart.Series to the ScatterChart.
